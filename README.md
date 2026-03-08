@@ -1,23 +1,23 @@
 # 2048 Game with Data Analytics
 
 A GUI-based implementation of the classic 2048 puzzle game built using Python and Tkinter.  
-The application logs gameplay metrics and performs statistical analysis using Pandas and NumPy to understand player behavior and game performance.
+The application logs gameplay data and performs statistical analysis using Pandas and NumPy.
 
 ## Features
 
-- Interactive GUI using Tkinter
-- Keyboard-based tile movement and merging
-- Score tracking system
-- Timer-based gameplay
-- Gameplay data logging for analytics
-- Statistical summary of gameplay using Pandas
+- Interactive GUI built using Tkinter
+- Keyboard-based tile movement
+- Tile merging logic with score tracking
+- Countdown timer gameplay
+- Gameplay data logging
+- Statistical analysis of game sessions
 
 ## Tech Stack
 
 Python  
 Tkinter  
-Pandas  
 NumPy  
+Pandas  
 
 ## Installation
 
@@ -29,6 +29,15 @@ Install dependencies
 
 pip install -r requirements.txt
 
-Run the application
+Run the program
 
 python main.py
+
+## Analytics
+
+After the game ends, gameplay data is analyzed using Pandas and statistics like:
+
+- Maximum tile reached
+- Number of moves
+- Score distribution
+- Empty cells analysis
