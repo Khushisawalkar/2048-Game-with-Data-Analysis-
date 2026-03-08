@@ -41,3 +41,4 @@ After the game ends, gameplay data is analyzed using Pandas and statistics like:
 - Number of moves
 - Score distribution
 - Empty cells analysis
+
