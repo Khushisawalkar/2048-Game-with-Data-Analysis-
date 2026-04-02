@@ -10,14 +10,13 @@ from ai_agent import get_best_move
 class Analytics2048:
     def __init__(self, master):
         self.master = master
-        self.master.title("2048 AI (Final Version)")
-        self.master.geometry("500x780")
+        self.master.title("Data-Driven 2048 (AI + Dashboard)")
+        self.master.geometry("500x750")
 
+        self.grid_size = 4
         self.board = np.zeros((4, 4), dtype=int)
         self.score = 0
         self.history = []
-        self.lives = 3
-
         self.time_limit = 30
         self.remaining_time = 30
         self.is_paused = False
@@ -39,10 +38,6 @@ class Analytics2048:
                                   font=("Verdana", 14, "bold"),
                                   bg="#bbada0", fg="white")
         self.lbl_score.pack(side="right", padx=20)
-
-        self.lbl_lives = tk.Label(self.master, text=f"Lives: {self.lives}",
-                                 font=("Verdana", 12, "bold"))
-        self.lbl_lives.pack()
 
         self.game_container = tk.Frame(self.master, bg="#bbada0", bd=10)
         self.game_container.pack(pady=20)
@@ -67,24 +62,6 @@ class Analytics2048:
         tk.Button(ctrl, text="Auto Play", command=self.auto_play).pack(side="left", padx=5)
         tk.Button(ctrl, text="Show Dashboard", command=self.show_dashboard).pack(side="left", padx=5)
 
-    # ---------------- COLORS ---------------- #
-    def get_colors(self, value):
-        colors = {
-            0: ("#cdc1b4", "#776e65"),
-            2: ("#eee4da", "#776e65"),
-            4: ("#ede0c8", "#776e65"),
-            8: ("#f2b179", "white"),
-            16: ("#f59563", "white"),
-            32: ("#f67c5f", "white"),
-            64: ("#f65e3b", "white"),
-            128: ("#edcf72", "white"),
-            256: ("#edcc61", "white"),
-            512: ("#edc850", "white"),
-            1024: ("#edc53f", "white"),
-            2048: ("#edc22e", "white"),
-        }
-        return colors.get(value, ("#3c3a32", "white"))
-
     # ---------------- GAME START ---------------- #
     def trigger_pregame_countdown(self, sec):
         self.game_active = False
@@ -98,34 +75,38 @@ class Analytics2048:
         self.board = np.zeros((4, 4), dtype=int)
         self.score = 0
         self.history = []
-        self.lives = 3
         self.remaining_time = self.time_limit
         self.game_active = True
         self.is_paused = False
-
-        self.update_lives()
 
         self.spawn_tile()
         self.spawn_tile()
         self.refresh_grid()
         self.run_timer()
+
         self.master.bind("<Key>", self.handle_keypress)
 
-    def update_lives(self):
-        self.lbl_lives.config(text=f"Lives: {self.lives}")
-
+    # ---------------- CORE GAME ---------------- #
     def spawn_tile(self):
         empty = list(zip(*np.where(self.board == 0)))
         if empty:
             r, c = random.choice(empty)
             self.board[r, c] = 2 if random.random() < 0.9 else 4
 
-    # ---------------- UI UPDATE ---------------- #
     def refresh_grid(self):
+        colors = {
+            0: ("#cdc1b4", "#776e65"), 2: ("#eee4da", "#776e65"),
+            4: ("#ede0c8", "#776e65"), 8: ("#f2b179", "white"),
+            16: ("#f59563", "white"), 32: ("#f67c5f", "white"),
+            64: ("#f65e3b", "white"), 128: ("#edcf72", "white"),
+            256: ("#edcc61", "white"), 512: ("#edc850", "white"),
+            1024: ("#edc53f", "white"), 2048: ("#edc22e", "white")
+        }
+
         for r in range(4):
             for c in range(4):
                 val = self.board[r, c]
-                bg, fg = self.get_colors(val)
+                bg, fg = colors.get(val, ("#3c3a32", "white"))
                 self.cells[r][c].config(text=str(val) if val else "", bg=bg, fg=fg)
 
         self.lbl_score.config(text=f"Score: {self.score}")
@@ -137,9 +118,9 @@ class Analytics2048:
                 self.remaining_time -= 1
                 self.master.after(1000, self.run_timer)
             else:
-                self.lose_life("Time's Up!")
+                self.game_over("Time's Up!")
 
-    # ---------------- GAME LOGIC ---------------- #
+    # ---------------- MOVES ---------------- #
     def move_logic(self, board, direction):
         rotations = {"L": 0, "D": 1, "R": 2, "U": 3}
         temp = np.rot90(board, rotations[direction])
@@ -171,6 +152,7 @@ class Analytics2048:
         final = np.rot90(np.array(new_board), -rotations[direction])
         return final, self.score + added_score
 
+    # ---------------- INPUT ---------------- #
     def handle_keypress(self, event):
         if not self.game_active or self.is_paused:
             return
@@ -188,20 +170,7 @@ class Analytics2048:
             self.refresh_grid()
 
         if not self.can_move_exist():
-            self.lose_life("No moves left!")
-
-    def lose_life(self, reason):
-        self.lives -= 1
-        self.update_lives()
-
-        if self.lives > 0:
-            messagebox.showinfo("Life Lost", f"{reason}\nLives left: {self.lives}")
-            self.board = np.zeros((4, 4), dtype=int)
-            self.spawn_tile()
-            self.spawn_tile()
-            self.refresh_grid()
-        else:
-            self.game_over(reason)
+            self.game_over("No moves left!")
 
     # ---------------- AI ---------------- #
     def game_logic(self, grid, move):
@@ -213,16 +182,24 @@ class Analytics2048:
     def ai_play(self):
         move = get_best_move(self.board.tolist(), self.game_logic)
         if move:
-            self.board, self.score = self.move_logic(self.board, {'LEFT':'L','RIGHT':'R','UP':'U','DOWN':'D'}[move])
+            self.board, self.score = self.move_logic(
+                self.board,
+                {'LEFT': 'L', 'RIGHT': 'R', 'UP': 'U', 'DOWN': 'D'}[move]
+            )
             self.spawn_tile()
             self.refresh_grid()
 
     def auto_play(self):
         if not self.game_active or self.is_paused:
             return
+
         move = get_best_move(self.board.tolist(), self.game_logic)
+
         if move:
-            self.board, self.score = self.move_logic(self.board, {'LEFT':'L','RIGHT':'R','UP':'U','DOWN':'D'}[move])
+            self.board, self.score = self.move_logic(
+                self.board,
+                {'LEFT': 'L', 'RIGHT': 'R', 'UP': 'U', 'DOWN': 'D'}[move]
+            )
             self.spawn_tile()
             self.refresh_grid()
             self.master.after(200, self.auto_play)
@@ -230,13 +207,26 @@ class Analytics2048:
     # ---------------- DASHBOARD ---------------- #
     def show_dashboard(self):
         if not self.history:
-            messagebox.showinfo("No Data", "Play first!")
+            messagebox.showinfo("No Data", "Play a game first!")
             return
+
         df = pd.DataFrame(self.history)
+
+        plt.figure()
         plt.plot(df["score"])
         plt.title("Score Progression")
+
+        plt.figure()
+        plt.plot(df["max_tile"])
+        plt.title("Max Tile Growth")
+
+        plt.figure()
+        plt.plot(df["empty_cells"])
+        plt.title("Empty Cells Trend")
+
         plt.show()
 
+    # ---------------- DATA ---------------- #
     def log_data(self, key):
         self.history.append({
             "move": key,
@@ -260,8 +250,18 @@ class Analytics2048:
         if not self.is_paused:
             self.run_timer()
 
+    # ---------------- GAME OVER ---------------- #
     def game_over(self, reason):
         self.game_active = False
+        self.master.unbind("<Key>")
+
+        df = pd.DataFrame(self.history)
+        print("\n--- Advanced Analytics ---")
+        print("Total Moves:", len(df))
+        print("Final Score:", self.score)
+        print("Max Tile:", df["max_tile"].max())
+        print("Avg Empty Cells:", df["empty_cells"].mean())
+
         messagebox.showinfo("Game Over", f"{reason}\nScore: {self.score}")
 
 
